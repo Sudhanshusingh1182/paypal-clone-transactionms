@@ -7,7 +7,6 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.paypal.transactionms.dao.TransactionRepo;
 import com.paypal.transactionms.entity.Transaction;
 import com.paypal.transactionms.error.ErrorDetail;
@@ -28,9 +27,6 @@ public class TransactionServiceImpl {
 	private TransactionRepo transactionRepo;
 
 	@Autowired
-	private ObjectMapper objectMapper;
-	
-	@Autowired
 	private KafkaEventProducer kafkaEventProducer;
 
 	public GenericResponse createTransaction(CreateTransactionRequest createTransactionRequest) {
@@ -42,12 +38,11 @@ public class TransactionServiceImpl {
 					.createdDate(LocalDateTime.now()).status("SUCCESS").build();
 
 			transactionRepo.save(transaction);
-			
-			String eventPayload = objectMapper.writeValueAsString(transaction);
+
 			String key = String.valueOf(transaction.getId());
-			kafkaEventProducer.sendTransactionEvent(key, eventPayload);
+			kafkaEventProducer.sendTransactionEvent(key, transaction);
 			log.debug("createTransaction:: Kafka message sent successfully");
-			
+
 			return GenericResponse.builder().success(true).build();
 
 		} catch (Exception e) {
